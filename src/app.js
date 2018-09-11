@@ -1,91 +1,36 @@
-import { Scene, Text, RegularPolygon, Math as M } from "pencil.js";
+import { Scene, Text, RegularPolygon } from "pencil.js";
 
-import Nodule from "./Nodule";
+import { Nodule, getNodule } from "./Nodule";
+import { store, load } from "./storage";
+import randomGraphFactory from "./randomGraphFactory";
 
-/**
- * Return a rounded random number
- * @param {Number} max - Max value of the random
- * @return {Number}
- */
-function random (max) {
-    return Math.round(M.random(max));
-}
 
 const scene = new Scene();
 
 const margin = Math.min(scene.width, scene.height) * 0.1;
-const constrain = [[margin, margin], [scene.width - margin, scene.height - margin]];
-const nbNodes = Math.floor((scene.width * scene.height) / 12e4);
+const constrain = [(scene.width / 2) - margin, (scene.height / 2) - margin];
+const initialNbNode = Math.floor((scene.width * scene.height) / 12e4);
+const saved = load();
 
 let nodes;
 let won;
 let moves;
-let currentLevel = 0;
-let difficulty = 0;
-
-/**
- * @typedef {Object} NoduleData
- * @param {Position} pos -
- * @param {Array<Number>} links -
- * @param {Number} value -
- */
-/**
- * Return a json formatted nodule
- * @param {Position} pos -
- * @param {Array<Number>} links -
- * @param {Number} value -
- * @return {NoduleData}
- */
-function getNodule (pos, links = [], value = 0) {
-    return {
-        pos,
-        links,
-        value,
-    };
-}
-
-/**
- * Return a random playable graph
- * @return {Array<NoduleData>}
- */
-function getRandomGraph () {
-    const graph = [];
-    let nbLinks = 0;
-    for (let i = 0; i < nbNodes; ++i) {
-        const newNode = getNodule(scene.getRandomPosition().constrain(...constrain));
-        const nbLink = random(2) + 1;
-        newNode.links = graph.filter(node => node.links.length < 4)
-            .sort((a, b) => a.pos.distance(newNode.position) - b.pos.distance(newNode.position))
-            .slice(0, nbLink).map((_, index) => index);
-        nbLinks += newNode.links.length;
-        graph.push(newNode);
-    }
-
-    const span = Math.ceil(nbNodes ** 0.5);
-    let total = 0;
-    graph.slice(1).forEach((node) => {
-        const value = random(span * 2) - span;
-        node.value = value;
-        total += value;
-    });
-    graph[0].value = ((nbLinks - nbNodes) + 1) - total;
-    return graph;
-}
+let currentLevel = saved.cl || 0;
+let difficulty = saved.df || 0;
 
 /**
  * Generate a new game from data or randomly if omitted
  * @param {Array<NoduleData>} [data] -
  */
 function generate (data) {
-    const graph = data || getRandomGraph(nbNodes);
-    won = false;
+    const graph = data || randomGraphFactory(constrain, Math.floor(initialNbNode + difficulty), 1 - (difficulty % 1));
     moves = 0;
     scene.empty();
     nodes = [];
 
     for (let i = 0, l = graph.length; i < l; ++i) {
         const nodeData = graph[i];
-        const newNode = new Nodule(nodeData.pos, nodeData.value);
+        const newNode = new Nodule(nodeData.position.add(scene.center), nodeData.value);
         const newLinks = nodeData.links.filter(linked => linked < i).map(linked => newNode.linkTo(nodes[linked]));
         scene.add(...newLinks, newNode);
         nodes.push(newNode);
@@ -94,25 +39,26 @@ function generate (data) {
 
 const levels = [
     [
-        getNodule(scene.center.subtract(100, 0), [1], 1),
-        getNodule(scene.center.add(100, 0), [0], -1),
+        getNodule([-100, 0], [1], 1),
+        getNodule([100, 0], [0], -1),
     ],
     [
-        getNodule(scene.center.subtract(300, 0), [1], 2),
-        getNodule(scene.center, [0, 2], -4),
-        getNodule(scene.center.add(300, 0), [1], 2),
+        getNodule([-300, 0], [1], 2),
+        getNodule([0, 0], [0, 2], -4),
+        getNodule([300, 0], [1], 2),
     ],
     (() => {
-        const positions = RegularPolygon.getRotatingPoints(3, 200).map(pos => pos.add(scene.center));
+        let i = 0;
+        const positions = RegularPolygon.getRotatingPoints(3, 200);
         return [
-            getNodule(positions[0], [1, 2], 3),
-            getNodule(positions[1], [0, 2], -2),
-            getNodule(positions[2], [0, 1], 1),
+            getNodule(positions[i++], [1, 2], 3),
+            getNodule(positions[i++], [0, 2], -2),
+            getNodule(positions[i], [0, 1], 1),
         ];
     })(),
     (() => {
         let i = 0;
-        const positions = RegularPolygon.getRotatingPoints(8, 200).map(pos => pos.add(scene.center));
+        const positions = RegularPolygon.getRotatingPoints(8, 200);
         return [
             getNodule(positions[i++], [], 5),
             getNodule(positions[i++], [i - 2], 1),
@@ -127,9 +73,11 @@ const levels = [
 ];
 
 generate(levels[currentLevel]);
+
 scene.on("click", () => {
     if (won) {
-        generate(levels[++currentLevel]);
+        won = false;
+        generate(levels[currentLevel]);
     }
     else {
         moves++;
@@ -140,6 +88,17 @@ scene.on("click", () => {
                 align: "center",
             });
             scene.add(won);
+
+            // Won a non-tuto level => increase difficulty
+            if (!levels[currentLevel]) {
+                difficulty += 0.6;
+            }
+            currentLevel++;
+
+            store({
+                cl: currentLevel,
+                df: difficulty,
+            });
         }
     }
 }).on("draw", () => {

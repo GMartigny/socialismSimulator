@@ -1,24 +1,26 @@
-import { Circle, Text } from "pencil.js";
+import { Circle, Text, Position } from "pencil.js";
 import Link from "./Link";
 
 /**
  * @class
  */
-export default class Nodule extends Circle {
+export class Nodule extends Circle {
     /**
      * Nodule constructor
      * @param {PositionDefinition} position -
      * @param {Number} [value=0] -
      */
     constructor (position, value = 0) {
-        super(position, 50, {
+        const radius = 50;
+        super(position, radius, {
             stroke: "#333",
             fill: "#aaa",
         });
-        this.text = new Text([0, -25], "", {
+        const fontSize = radius / 2;
+        this.text = new Text([0, -(fontSize / 2)], "", {
             align: Text.alignments.center,
             fill: "#fff",
-            fontSize: 50,
+            fontSize,
             cursor: "pointer",
         });
         this.add(this.text);
@@ -35,7 +37,7 @@ export default class Nodule extends Circle {
      */
     click () {
         this.value -= this.links.length;
-        this.links.forEach(link => link.value += 1);
+        this.links.forEach(link => link.sendFrom(this));
     }
 
     /**
@@ -49,9 +51,9 @@ export default class Nodule extends Circle {
      * @param {Number} value -
      */
     set value (value) {
-        this._value = value;
-        this.text.text = value.toString();
-        if (value < 0) {
+        this._value = Math.round(value);
+        this.text.text = this._value.toString();
+        if (this._value < 0) {
             this.options.fill = "#ff7365";
         }
         else {
@@ -64,11 +66,33 @@ export default class Nodule extends Circle {
      * @return {Link}
      */
     linkTo (nodule) {
-        if (nodule && !this.links.includes(nodule)) {
-            this.links.push(nodule);
-            nodule.links.push(this);
-            return new Link(this, nodule);
+        if (nodule && !this.links.find(link => link.getOther(this) === nodule)) {
+            const newLink = new Link(this, nodule);
+            this.links.push(newLink);
+            nodule.links.push(newLink);
+            return newLink;
         }
         return null;
     }
+}
+
+/**
+ * @typedef {Object} NoduleData
+ * @param {Position} pos -
+ * @param {Array<Number>} links -
+ * @param {Number} value -
+ */
+/**
+ * Return a json formatted nodule
+ * @param {Position} position -
+ * @param {Array<Number>} links -
+ * @param {Number} value -
+ * @return {NoduleData}
+ */
+export function getNodule (position, links = [], value = 0) {
+    return {
+        position: Position.from(position),
+        links,
+        value,
+    };
 }
