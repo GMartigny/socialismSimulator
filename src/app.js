@@ -4,8 +4,10 @@ import { getNodule } from "./Nodule";
 import { store, load } from "./storage";
 import { graphFactory, randomGraphFactory } from "./Graph";
 
-
-const scene = new Scene();
+const canvas = document.getElementById("scene");
+const scene = new Scene(canvas, {
+    fill: "#f5f5f5",
+});
 
 const margin = Math.min(scene.width, scene.height) * 0.1;
 const constrain = [(scene.width / 2) - margin, (scene.height / 2) - margin];
