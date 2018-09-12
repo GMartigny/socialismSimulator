@@ -1,6 +1,6 @@
-# Socialism Simulator ![Logo](https://badgen.net/badge/Socialism/Simulator/red)
+# [![Logo](https://badgen.net/badge/Socialism/Simulator/red)](https://gmartigny.github.io/socialismSimulator/)
 
-Game for the reds.
+[Game for the reds](https://gmartigny.github.io/socialismSimulator/).
 
 ## Goal
 
