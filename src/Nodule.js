@@ -1,4 +1,4 @@
-import { Circle, Text, Position } from "pencil.js";
+import { Circle, Text, Position, BaseEvent } from "pencil.js";
 import Link from "./Link";
 
 /**
@@ -38,6 +38,12 @@ export class Nodule extends Circle {
     click () {
         this.value -= this.links.length;
         this.links.forEach(link => link.sendFrom(this));
+        this.fire(new BaseEvent(this, "lends"));
+    }
+
+    remove () {
+        this.links.forEach(link => link.remove());
+        super.remove();
     }
 
     /**

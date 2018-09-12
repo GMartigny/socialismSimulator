@@ -1,4 +1,4 @@
-import { Scene, Text, RegularPolygon } from "pencil.js";
+import { Scene, Text, RegularPolygon, Rectangle, Position } from "pencil.js";
 
 import { Nodule, getNodule } from "./Nodule";
 import { store, load } from "./storage";
@@ -12,8 +12,7 @@ const constrain = [(scene.width / 2) - margin, (scene.height / 2) - margin];
 const initialNbNode = Math.floor((scene.width * scene.height) / 12e4);
 const saved = load();
 
-let nodes;
-let won;
+let nodes = [];
 let moves;
 let currentLevel = saved.cl || 0;
 let difficulty = saved.df || 0;
@@ -25,7 +24,7 @@ let difficulty = saved.df || 0;
 function generate (data) {
     const graph = data || randomGraphFactory(constrain, Math.floor(initialNbNode + difficulty), 1 - (difficulty % 1));
     moves = 0;
-    scene.empty();
+    nodes.forEach(node => node.remove());
     nodes = [];
 
     for (let i = 0, l = graph.length; i < l; ++i) {
@@ -74,35 +73,57 @@ const levels = [
 
 generate(levels[currentLevel]);
 
-scene.on("click", () => {
-    if (won) {
-        won = false;
-        generate(levels[currentLevel]);
-    }
-    else {
-        moves++;
-        if (!nodes.find(node => node.value < 0)) {
-            won = new Text(scene.center.subtract(0, 70), `You won in ${moves} moves !`, {
-                fill: "red",
-                fontSize: 70,
-                align: "center",
-            });
-            scene.add(won);
+const background = new Rectangle([0, 0], scene.width, scene.height, {
+    fill: "#111",
+    opacity: 0.5,
+    zIndex: 10,
+});
+const fontSize = 70;
+const winText = new Text(scene.center.subtract(0, fontSize), "", {
+    fill: "red",
+    fontSize,
+    align: "center",
+    opacity: 1,
+    rotationAnchor: [0, fontSize / 2],
+});
+background.add(winText);
 
-            // Won a non-tuto level => increase difficulty
-            if (!levels[currentLevel]) {
-                difficulty += 0.6;
-            }
-            currentLevel++;
+background.on("click", () => {
+    background.remove();
+    generate(levels[currentLevel]);
+});
+scene.on("lends", () => {
+    moves++;
+    if (!nodes.find(node => node.value < 0)) {
+        scene.add(background);
+        winText.text = `You won in ${moves} moves !`;
 
-            store({
-                cl: currentLevel,
-                df: difficulty,
-            });
+        // Won a non-tuto level => increase difficulty
+        if (!levels[currentLevel]) {
+            difficulty += 0.6;
         }
+        currentLevel++;
+
+        store({
+            cl: currentLevel,
+            df: difficulty,
+        });
     }
 }).on("draw", () => {
-    if (won) {
-        won.options.rotation = Math.cos(won.frameCount / 20) / 50;
+    if (background.options.shown) {
+        winText.options.rotation = Math.cos(winText.frameCount / 20) / 50;
     }
+    const optimal = 200;
+    nodes.forEach((node) => {
+        if (!node.isDragged) {
+            const forces = nodes.reduce((acc, other) => {
+                const distance = node.position.distance(other.position);
+                if (other !== node && distance < optimal) {
+                    acc.add(node.position.clone().subtract(other.position).multiply((optimal - distance) ** 2));
+                }
+                return acc;
+            }, new Position(0, 0));
+            node.position.add(forces.divide(3e5));
+        }
+    });
 }, true).startLoop();
