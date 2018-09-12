@@ -56,6 +56,13 @@ const levels = [
         ];
     })(),
     (() => {
+        const positions = RegularPolygon.getRotatingPoints(5, 200);
+        return [
+            getNodule([0, 0], [], 30),
+            ...positions.map(pos => getNodule(pos, [0], -5)),
+        ];
+    })(),
+    (() => {
         let i = 0;
         const positions = RegularPolygon.getRotatingPoints(8, 200);
         return [
