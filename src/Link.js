@@ -16,14 +16,18 @@ export default class Link extends Spline {
         });
         this.from = from;
         this.to = to;
-        this.middle = this.position.clone().lerp(this.to.position, 0.5);
+        this.middle = this.getCenter();
+    }
+
+    getCenter () {
+        return this.position.clone().lerp(this.to.position, 0.5);
     }
 
     /**
      * @override
      */
     trace (...params) {
-        const center = this.position.clone().lerp(this.to.position, 0.5);
+        const center = this.getCenter();
         this.middle.lerp(center, 0.1);
         this.points = [this.middle, this.to.position].map(point => point.clone().subtract(this.position));
 

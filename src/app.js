@@ -1,8 +1,8 @@
-import { Scene, Text, RegularPolygon, Rectangle, Position } from "pencil.js";
+import { Scene, Text, RegularPolygon, Rectangle, Container } from "pencil.js";
 
-import { Nodule, getNodule } from "./Nodule";
+import { getNodule } from "./Nodule";
 import { store, load } from "./storage";
-import randomGraphFactory from "./randomGraphFactory";
+import { graphFactory, randomGraphFactory } from "./Graph";
 
 
 const scene = new Scene();
@@ -12,27 +12,27 @@ const constrain = [(scene.width / 2) - margin, (scene.height / 2) - margin];
 const initialNbNode = Math.floor((scene.width * scene.height) / 12e4);
 const saved = load();
 
-let nodes = [];
-let moves;
+let graph;
+let moves = saved.mv || 0;
 let currentLevel = saved.cl || 0;
 let difficulty = saved.df || 0;
+
+const wrapper = new Container(scene.center);
+scene.add(wrapper);
 
 /**
  * Generate a new game from data or randomly if omitted
  * @param {Array<NoduleData>} [data] -
  */
 function generate (data) {
-    const graph = data || randomGraphFactory(constrain, Math.floor(initialNbNode + difficulty), 1 - (difficulty % 1));
-    moves = 0;
-    nodes.forEach(node => node.remove());
-    nodes = [];
+    wrapper.empty();
+    graph = data ?
+        graphFactory(data, constrain) :
+        randomGraphFactory(constrain, Math.floor(initialNbNode + difficulty), 1 - (difficulty % 1));
 
-    for (let i = 0, l = graph.length; i < l; ++i) {
-        const nodeData = graph[i];
-        const newNode = new Nodule(nodeData.position.add(scene.center), nodeData.value);
-        const newLinks = nodeData.links.filter(linked => linked < i).map(linked => newNode.linkTo(nodes[linked]));
-        scene.add(...newLinks, newNode);
-        nodes.push(newNode);
+    for (let i = 0, l = graph.nodes.length; i < l; ++i) {
+        const node = graph.get(i);
+        wrapper.add(...node.links, node);
     }
 }
 
@@ -71,7 +71,7 @@ const levels = [
     })(),
 ];
 
-generate(levels[currentLevel]);
+generate(saved.gr || levels[currentLevel]);
 
 const background = new Rectangle([0, 0], scene.width, scene.height, {
     fill: "#111",
@@ -88,13 +88,34 @@ const winText = new Text(scene.center.subtract(0, fontSize), "", {
 });
 background.add(winText);
 
+const levelText = new Text([10, 10], `Level: ${currentLevel}`, {
+    fill: "#666",
+});
+scene.add(levelText);
+
+/**
+ * Save data
+ * @param {Boolean} withoutGraph -
+ */
+function saveAll (withoutGraph) {
+    store({
+        cl: currentLevel,
+        df: difficulty,
+        gr: !withoutGraph && graph,
+        mv: !withoutGraph && moves,
+    });
+}
+
 background.on("click", () => {
     background.remove();
+    moves = 0;
     generate(levels[currentLevel]);
+    levelText.text = `Level: ${currentLevel}`;
+    saveAll();
 });
 scene.on("lends", () => {
     moves++;
-    if (!nodes.find(node => node.value < 0)) {
+    if (graph.isWon()) {
         scene.add(background);
         winText.text = `You won in ${moves} moves !`;
 
@@ -104,26 +125,14 @@ scene.on("lends", () => {
         }
         currentLevel++;
 
-        store({
-            cl: currentLevel,
-            df: difficulty,
-        });
+        saveAll(true);
+    }
+    else {
+        saveAll();
     }
 }).on("draw", () => {
     if (background.options.shown) {
         winText.options.rotation = Math.cos(winText.frameCount / 20) / 50;
     }
-    const optimal = 200;
-    nodes.forEach((node) => {
-        if (!node.isDragged) {
-            const forces = nodes.reduce((acc, other) => {
-                const distance = node.position.distance(other.position);
-                if (other !== node && distance < optimal) {
-                    acc.add(node.position.clone().subtract(other.position).multiply((optimal - distance) ** 2));
-                }
-                return acc;
-            }, new Position(0, 0));
-            node.position.add(forces.divide(3e5));
-        }
-    });
+    graph.magnetic();
 }, true).startLoop();

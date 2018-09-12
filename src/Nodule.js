@@ -1,6 +1,8 @@
 import { Circle, Text, Position, BaseEvent } from "pencil.js";
 import Link from "./Link";
 
+const lightBlack = "#333";
+
 /**
  * @class
  */
@@ -8,22 +10,27 @@ export class Nodule extends Circle {
     /**
      * Nodule constructor
      * @param {PositionDefinition} position -
+     * @param {Number} radius -
      * @param {Number} [value=0] -
      */
-    constructor (position, value = 0) {
-        const radius = 50;
+    constructor (position, radius, value = 0) {
         super(position, radius, {
-            stroke: "#333",
-            fill: "#aaa",
+            stroke: lightBlack,
         });
         const fontSize = radius / 2;
-        this.text = new Text([0, -(fontSize / 2)], "", {
-            align: Text.alignments.center,
+        const subCircle = new Circle([0, -fontSize + 4], fontSize, {
             fill: "#fff",
+            stroke: lightBlack,
+            cursor: "pointer",
+        });
+        this.text = new Text([0, -(fontSize / 2)], "0", {
+            align: Text.alignments.center,
+            fill: lightBlack,
             fontSize,
             cursor: "pointer",
         });
-        this.add(this.text);
+        subCircle.add(this.text);
+        this.add(subCircle);
         this.links = [];
         this._value = null;
         this.value = value;
@@ -41,6 +48,9 @@ export class Nodule extends Circle {
         this.fire(new BaseEvent(this, "lends"));
     }
 
+    /**
+     * @override
+     */
     remove () {
         this.links.forEach(link => link.remove());
         super.remove();
@@ -79,6 +89,17 @@ export class Nodule extends Circle {
             return newLink;
         }
         return null;
+    }
+
+    /**
+     * @override
+     */
+    toJSON () {
+        return {
+            position: this.position.toJSON(),
+            links: [],
+            value: this.value,
+        };
     }
 }
 
