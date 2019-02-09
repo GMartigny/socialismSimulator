@@ -4,6 +4,7 @@
   "description": "Game for the reds",
   "main": "index.html",
   "scripts": {
+    "lint": "eslint src",
     "play": "webpack --mode=development --watch",
     "build": "webpack --mode=production"
   },
@@ -24,12 +25,12 @@
   },
   "homepage": "https://github.com/GMartigny/socialismSimulator#readme",
   "devDependencies": {
-    "@gmartigny/eslint-config": "^1.2.1",
-    "eslint": "^5.5.0",
-    "webpack": "^4.17.2",
-    "webpack-command": "^0.4.1"
+    "@gmartigny/eslint-config": "^1.2.3",
+    "eslint": "^5.13.0",
+    "webpack": "^4.29.3",
+    "webpack-cli": "^3.2.3"
   },
   "dependencies": {
-    "pencil.js": "^1.0.1"
+    "pencil.js": "^1.5.0"
   }
 }
