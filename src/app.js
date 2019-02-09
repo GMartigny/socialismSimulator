@@ -5,7 +5,7 @@ import { store, load } from "./storage";
 import { graphFactory, randomGraphFactory } from "./Graph";
 
 const canvas = document.getElementById("scene");
-const scene = new Scene(canvas, {
+const scene = new Scene(undefined, {
     fill: "#f5f5f5",
 });
 
@@ -116,7 +116,7 @@ function saveAll (withoutGraph) {
 }
 
 background.on("click", () => {
-    background.remove();
+    background.delete();
     moves = 0;
     generate(levels[currentLevel]);
     levelText.text = `Level: ${currentLevel}`;

@@ -2,6 +2,7 @@ import { Circle, Text, Position, BaseEvent } from "pencil.js";
 import Link from "./Link";
 
 const lightBlack = "#333";
+const valueKey = Symbol("_value");
 
 /**
  * @class
@@ -32,7 +33,7 @@ export class Nodule extends Circle {
         subCircle.add(this.text);
         this.add(subCircle);
         this.links = [];
-        this._value = null;
+        this[valueKey] = null;
         this.value = value;
 
         this.on("click", () => this.click());
@@ -45,31 +46,31 @@ export class Nodule extends Circle {
     click () {
         this.value -= this.links.length;
         this.links.forEach(link => link.sendFrom(this));
-        this.fire(new BaseEvent(this, "lends"));
+        this.fire(new BaseEvent("lends", this));
     }
 
     /**
      * @override
      */
-    remove () {
-        this.links.forEach(link => link.remove());
-        super.remove();
+    delete () {
+        this.links.forEach(link => link.delete());
+        super.delete();
     }
 
     /**
      * @return {Number}
      */
     get value () {
-        return this._value;
+        return this[valueKey];
     }
 
     /**
      * @param {Number} value -
      */
     set value (value) {
-        this._value = Math.round(value);
-        this.text.text = this._value.toString();
-        if (this._value < 0) {
+        this[valueKey] = Math.round(value);
+        this.text.text = this[valueKey].toString();
+        if (this[valueKey] < 0) {
             this.options.fill = "#ff7365";
         }
         else {
@@ -95,10 +96,11 @@ export class Nodule extends Circle {
      * @override
      */
     toJSON () {
+        const { position, links, value } = this;
         return {
-            position: this.position.toJSON(),
-            links: [],
-            value: this.value,
+            position,
+            links,
+            value,
         };
     }
 }

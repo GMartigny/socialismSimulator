@@ -21,14 +21,28 @@ class WinnableGraph {
         return !this.nodes.find(node => node.value < 0);
     }
 
+    /**
+     * Return the nodule at a given index
+     * @param {Number} index - Index of the nodule
+     * @returns {Nodule}
+     */
     get (index) {
         return this.nodes[index];
     }
 
+    /**
+     * Add a new nodule to this graph
+     * @param {Nodule} nodule - New nodule to add
+     * @returns {WinnableGraph} Itself
+     */
     add (nodule) {
         this.nodes.push(nodule);
+        return this;
     }
 
+    /**
+     * Apply a repulsion force to every nodules
+     */
     magnetic () {
         const optimal = this.nodes[0].radius * 3;
         this.nodes.forEach((node) => {
@@ -51,12 +65,18 @@ class WinnableGraph {
      */
     toJSON () {
         const json = this.nodes.map(node => node.toJSON());
-        this.nodes.forEach((node, index) => {
-            return json[index].links = node.links.map(link => this.nodes.indexOf(link.getOther(node)));
+        json.forEach((node, index) => {
+            node.links = node.links.map(link => this.nodes.indexOf(link.getOther(this.get(index))));
         });
         return json;
     }
 
+    /**
+     * Returns optimal nodule radius of this graph
+     * @param {Number} nbNodes - Number of nodes in this graph
+     * @param {Array<Number>} constrain - Max width and height of the scene
+     * @returns {Number}
+     */
     static getNoduleRadius (nbNodes, constrain) {
         const space = Math.min(...constrain);
         return space / ((nbNodes ** 0.5) * 2);
@@ -85,9 +105,10 @@ export function randomGraphFactory (constrain, nbNodes, boost) {
     let nbLinks = 0;
     for (let i = 0; i < nbNodes; ++i) {
         let position;
+        const check = () => graph.nodes.find(node => node.position.distance(position) < radius * 2);
         do {
             position = pickPosition(constrain);
-        } while (graph.nodes.find(node => node.position.distance(position) < radius * 2));
+        } while (check());
 
         const newNode = new Nodule(position, radius);
         graph.nodes.map((_, index) => index).filter(index => graph.get(index).links.length < 3)

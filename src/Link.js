@@ -6,8 +6,8 @@ import { Spline, Circle } from "pencil.js";
 export default class Link extends Spline {
     /**
      * Link constructor
-     * @param {Nodule} from -
-     * @param {Nodule} to -
+     * @param {Nodule} from - Starting position
+     * @param {Nodule} to - Ending position
      */
     constructor (from, to) {
         super(from.position, [], 0.2, {
@@ -19,6 +19,10 @@ export default class Link extends Spline {
         this.middle = this.getCenter();
     }
 
+    /**
+     * Return the central position of this link
+     * @returns {Position}
+     */
     getCenter () {
         return this.position.clone().lerp(this.to.position, 0.5);
     }
@@ -34,7 +38,7 @@ export default class Link extends Spline {
         this.children.forEach((child) => {
             child.position.lerp(child.options.destination, 0.08);
             if (child.position.distance(child.options.destination) < child.radius) {
-                child.remove();
+                child.delete();
             }
         });
 
@@ -50,15 +54,15 @@ export default class Link extends Spline {
         if (nodule === this.from) {
             return this.to;
         }
-        else if (nodule === this.to) {
+        if (nodule === this.to) {
             return this.from;
         }
         return null;
     }
 
     /**
-     *
-     * @param {Position} origin -
+     * Send a circle along the link
+     * @param {Position} origin - Starting position
      */
     sendFrom (origin) {
         const destination = this.getOther(origin);
